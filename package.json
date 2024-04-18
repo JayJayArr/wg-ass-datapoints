@@ -1,0 +1,22 @@
+{
+  "name": "wg-ass-datapoints",
+  "version": "1.0.0",
+  "description": "Winguard Script to import associated datapoints",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JayJayArr/wg-ass-datapoints.git"
+  },
+  "author": "JayJayarr",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JayJayArr/wg-ass-datapoints/issues"
+  },
+  "homepage": "https://github.com/JayJayArr/wg-ass-datapoints#readme",
+  "dependencies": {
+    "sqlite3": "^5.1.7"
+  }
+}
