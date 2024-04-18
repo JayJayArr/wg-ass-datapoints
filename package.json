@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/JayJayArr/wg-ass-datapoints#readme",
   "dependencies": {
+    "csvtojson": "^2.0.10",
     "sqlite3": "^5.1.7"
   }
 }
