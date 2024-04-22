@@ -11,64 +11,53 @@ const db = new sqlite3.Database("./Core.db", (err) => {
     }
     
     csv().fromFile("./updateassdatapoints.csv")
-    .then((jsonObj) => {
+    .then(async (jsonObj) => {
     assupdates = jsonObj;
-    console.log(assupdates);
-    assupdates.forEach((assupdate) => {
-        updateAss(assupdate);
-    })
+    await Promise.all(assupdates.map(async (assupdate) => {
+        let assString = await getAssIdString(assupdate);
+        let JSONData = await getCurrentDataFromDB(assupdate?.code);
+        console.log("Updating " , JSONData, "with AssString", assString);
+        if (!JSONData) {
+            JSONData = {};
+        }
+        JSONData.associateddatapoints = assString;
+        let response = await updateAssInDB(assupdate?.code, JSON.stringify(JSONData));
+        console.log(response);
+    }))
     closeDb(db);
 })
 })
 let assupdates;
+                //TODO: Update the property on the datapoint with the created code  
+                //TODO: get datapoint from db with the old data
+                //TODO: update data
+                //TODO: write new data to database
 
+function getAssIdString(assupdate) {
+    return new Promise(async (resolve, reject) => {
+        let assIds = Buffer.alloc(0); // collecting all the assIds as a concatenated buffer
 
-function runQueries(db){
-    db.all("SELECT * FROM datapoint;", function(err, rows) {
-        if (err) {
-            console.log("Getting error " + err);
-        }
-        else if(rows) {
-            rows.forEach((row) => {
-                if(JSON.parse(row?.obj_props)?.associateddatapoints) {
-                    console.log(
-                        JSON.parse(row?.obj_props), 
-                        'has an ass-string\r\n',
-                    );
-                }
-                else {
-                    console.log((new Buffer.from(row?.id).toString("base64")), "has no associated datapoints ", "\r\n")
-                }
-
+        await Promise.all(assupdate?.ass.map(async (ass) => {
+            await getAssIdFromDb(ass)
+            .then(response => {
+                let currentBufferlength = assIds.length;
+                assIds = Buffer.concat([assIds, response], currentBufferlength + 16);
             })
-        }
-    });
-}
+            .catch(reason => {
+                console.log(reason);
+                reject(reason);
+            });
+        }))
 
-function updateAss(assupdate) {
-    //TODO: get all ass datapoints and their id from the DB
-    let assIds = Buffer.alloc(0); // collecting all the assIds as a concatenated string
-    assupdate?.ass.forEach((ass) => {
-        getAssIdFromDb(ass)
-        .then(response => {
-            let currentBufferlength = assIds.length;
-            assIds = Buffer.concat([assIds, response], currentBufferlength + 16);
-            console.log(assIds);
-            
-        })
-        .catch(reason => {
-            console.log(reason);
-        });
+        let assString = (new Buffer.from(assIds).toString("base64"));
+        console.log(assString);
+        resolve((new Buffer.from(assIds).toString("base64")));
     })
-    //let assString = (new Buffer.from(assIds).toString("base64"));
-    //console.log(assString);
-    //TODO: convert all ids to the desired Format using concat and (new Buffer.from(row?.id).toString("base64"))
-    //TODO: Update the property on the datapoint with the code to
 
 }
+
 function getAssIdFromDb(code) {
     return new Promise((resolve, reject) => {
-        console.log(code);
         db.get("select id from datapoint where code = $code", {$code: code}, function(err, row) {
             if (err) {
                 console.log("Getting error " + err);
@@ -82,9 +71,43 @@ function getAssIdFromDb(code) {
                 reject(err);
             }
         })
-    })
+    })   
+}
 
-    
+function getCurrentDataFromDB(code) {
+    return new Promise((resolve, reject) => {
+        db.get("select obj_props from datapoint where code = $code", {$code: code}, function(err, row) {
+            if (err) {
+                console.log("Getting error(test) " + err);
+                reject(err);
+            }   
+            else if(row) {
+                resolve(JSON.parse(row?.obj_props));
+            }
+            else {
+                console.log("shits lit yo")
+                reject(err);
+            }
+        })
+    }) 
+}
+
+function updateAssInDB(code, string) {
+    return new Promise((resolve, reject) => {
+        db.run("update datapoint set obj_props = json($string) where code = $code", {$code: code, $string: string}, function(runResult, err) {
+            if (err) {
+                console.log("Getting error(update) " + err);
+                reject("Frigging errog", err);
+            }   
+            else if (!runResult) {
+                resolve("successful");
+            }
+            else {
+                console.log("shits lit yo")
+                reject(runResult);
+            }
+        })
+    }) 
 }
 
 function closeDb(db) {
